@@ -1,30 +1,30 @@
-# Paket doğrulaması — 2026-10-04
+# Package validation — 2026-10-04
 
-Windows üzerinde Node.js v24.13.0, npm 11.11.0 ve Skills CLI 1.7.0 ile doğrulandı.
+Validated on Windows with Node.js v24.13.0, npm 11.11.0, and Skills CLI 1.7.0.
 
-| Kontrol | Sonuç |
+| Check | Result |
 | --- | --- |
-| `npm run check` | Paket yapısı geçti; 5 helper testi geçti, 0 başarısız, 0 atlanan |
+| `npm run check` | Package structure passed; 5 helper tests passed, 0 failed, 0 skipped |
 | Codex `skill-creator/scripts/quick_validate.py skills/evidence-audit` | `Skill is valid!` |
-| `npx skills@1.7.0 add . --list` | Tek skill keşfedildi: `evidence-audit` |
-| İzole projede `npx skills@1.7.0 add D:/Codebox/Skill-Evidence-Audit --skill evidence-audit --agent claude-code codex --copy --yes` | Kurulum çıkış kodu 0 |
-| Kurulan Claude Code ve Codex dosyaları | Kaynaktaki dört dosyanın tamamı ile byte düzeyinde eşit |
-| Kurulu helper ile yeni ve devam eden ledger | İlk çağrı `created: true`, ikinci çağrı `created: false`; ikisinde de `F1` önerisi |
-| `dist/evidence-audit.zip` içeriği | Tam olarak dört skill dosyası; kaynakla byte düzeyinde eşit |
+| `npx skills@1.7.0 add . --list` | Discovered one skill: `evidence-audit` |
+| In an isolated project: `npx skills@1.7.0 add D:/Codebox/Skill-Evidence-Audit --skill evidence-audit --agent claude-code codex --copy --yes` | Installation exited with code 0 |
+| Installed Claude Code and Codex files | All four bundled files matched the source byte for byte |
+| Installed helper with a new and existing ledger | First call: `created: true`; second call: `created: false`; both suggested `F1` |
+| Contents of `dist/evidence-audit.zip` | Exactly four skill files, matching the source byte for byte |
 
-Helper testleri mevcut kaynak/ledger korunmasını, farklı kapsamlar arasında ID devamını, eşzamanlı exclusive oluşturmayı, geçersiz yolları ve dışarı yönlenen linkleri kontrol eder. Paket herhangi bir npm bağımlılığı kurdurmaz.
+The helper tests cover preservation of existing source files and ledgers, ID continuation across scopes, concurrent exclusive creation, invalid paths, and links that escape the repository. The package requires no npm dependency installation.
 
-İlk doğrulamada yerel Codex validator'ı Agent Skills standardındaki `compatibility` frontmatter alanını reddetti. Gereksinimler ana metne taşındı; son doğrulama geçti.
+During initial validation, the local Codex validator rejected the Agent Skills standard's `compatibility` frontmatter field. Environment requirements were moved into the body; final validation passed.
 
-İlk deneme kurulumu yalnızca `.temp_files/install-check/` altında yapıldı. Kullanıcının global skill dizinlerine kurulmadı. Gerçek Claude/Codex model oturumlarında audit davranış değerlendirmesi ve diğer işletim sistemlerinde çalıştırma yapılmadı. Paket kurulumu, model kararlarının doğruluğunu veya bir hedef kod tabanının hatasızlığını kanıtlamaz.
+The initial test installation used only `.temp_files/install-check/`. No installation was made into the user's global skill directories. Audit behavior was not evaluated in actual Claude/Codex model sessions, and other operating systems were not tested. Successful package installation does not certify model decisions or prove that an audited codebase is free of defects.
 
-İlk paket hazırlığı sırasında bu klasör Git deposu olmadığı için `git diff --check` çalıştırılmadı. Bu bölüm ilk yerel doğrulama kaydıdır; yayın kontrolleri ayrıca aşağıda kaydedilir.
+During initial package preparation, this directory was not a Git repository, so `git diff --check` was not run. This section records the initial local validation; publication checks are recorded below.
 
-## GitHub yayın doğrulaması — 2026-10-04
+## GitHub publication validation — 2026-10-04
 
-- Depo: [ersinkoc/evidence-audit](https://github.com/ersinkoc/evidence-audit); GitHub API üzerinden görünürlük `PUBLIC`, varsayılan dal `main` doğrulandı.
-- Yayın öncesi `npm run check`: yapı doğrulaması ve 5 test geçti.
-- `git diff --cached --check` ve `git diff --check`: çıkış kodu 0.
-- `.temp_files/github-install-check/` içinde `npx skills@1.7.0 add ersinkoc/evidence-audit --skill evidence-audit --agent claude-code codex --copy --yes`: GitHub deposunu klonladı, tek skill keşfetti ve iki ajan için kurulum tamamlandı; çıkış kodu 0.
-- GitHub'dan kurulan iki kopyada dört skill dosyasının tamamı kaynakla byte düzeyinde eşit.
-- README kurulum komutları gerçek depo adına güncellendi. Global kullanıcı kurulumu yapılmadı.
+- Repository: [ersinkoc/evidence-audit](https://github.com/ersinkoc/evidence-audit); the GitHub API confirmed `PUBLIC` visibility and `main` as the default branch.
+- Before publication, `npm run check` passed package validation and all 5 tests.
+- `git diff --cached --check` and `git diff --check` exited with code 0.
+- In `.temp_files/github-install-check/`, `npx skills@1.7.0 add ersinkoc/evidence-audit --skill evidence-audit --agent claude-code codex --copy --yes` cloned the GitHub repository, discovered one skill, and completed installation for both agents; exit code 0.
+- All four skill files in both GitHub installation copies matched the source byte for byte.
+- README installation commands were updated to the actual repository name. No global user installation was performed.

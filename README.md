@@ -1,48 +1,48 @@
 # Evidence Audit
 
-Her dilde ve somut kod kapsamlarında kanıta dayalı hata arama ve düzeltme skill'i. Bir bulgu için önce mevcut kodda çalışan hata kanıtı, ardından dar düzeltme, üç ardışık deterministik doğrulama ve gerektiğinde kalıcı regresyon testi ister.
+An evidence-led bug hunting and fixing skill for concrete codebase scopes in any language. Each finding requires a runnable proof against the current code, a narrow fix, three consecutive deterministic verification runs, and a permanent regression test when required.
 
-Paket [Agent Skills standardını](https://agentskills.io/specification) kullanır. Claude Code, Codex ve `skills` CLI'ın desteklediği diğer ajanlar aynı `skills/evidence-audit/` klasörünü kurabilir. Her uygulamanın skill keşfi ve komut çalıştırma yetenekleri farklıdır; yalnızca sohbet erişimi olan bir ortam gerçek audit yapamaz.
+The package follows the [Agent Skills standard](https://agentskills.io/specification). Claude Code, Codex, and other agents supported by the `skills` CLI can install the same `skills/evidence-audit/` directory. Skill discovery and command execution vary by application; an environment with only chat access cannot run an audit.
 
-## Kurulum
+## Installation
 
-Kurulum aracı [skills.sh / Vercel Skills CLI](https://github.com/vercel-labs/skills): `npx skills add`.
+Install with [skills.sh / Vercel Skills CLI](https://github.com/vercel-labs/skills): `npx skills add`.
 
-Depodaki skill'i listele:
+List the skill available in this repository:
 
 ```sh
 npx skills add ersinkoc/evidence-audit --list
 ```
 
-Kendi kod projenin kökünde çalıştır:
+Install from your code project's root directory:
 
 ```sh
 npx skills add ersinkoc/evidence-audit --skill evidence-audit --agent claude-code codex --copy
 ```
 
-Tüm projelerde kullanmak için global kurulum:
+Install globally to use it across projects:
 
 ```sh
 npx skills add ersinkoc/evidence-audit --skill evidence-audit --agent claude-code codex --global --copy
 ```
 
-Diğer desteklenen ajanları da seçmek için:
+To select all supported agents:
 
 ```sh
 npx skills add ersinkoc/evidence-audit --skill evidence-audit --agent '*'
 ```
 
-Global kurulumu tüm ajanlara yapmak istersen aynı komuta `--global` ekle. Kurulumun sunduğu hedefleri incele; aynı isimli mevcut bir skill varsa kurulum onu güncelleyebilir. Windows'ta PowerShell `npx.ps1` çalıştırmayı engelliyorsa `npx.cmd` kullan. `--copy` sembolik bağlantı ihtiyacını kaldırır.
+Add `--global` to the same command for a global installation across all agents. Review the installation targets; an existing skill with the same name may be updated. On Windows, use `npx.cmd` if PowerShell blocks `npx.ps1`. The `--copy` option avoids the need for symbolic links.
 
-Yerel geliştirme kopyasından kurmak için kaynak olarak klasör yolunu ver:
+To install from a local development copy, pass its directory as the source:
 
 ```sh
 npx skills add ./evidence-audit --skill evidence-audit --agent claude-code codex --copy
 ```
 
-Bu dağıtım için npm'e ayrı bir paket yayınlamak gerekmez; `npx` installer'ı çalıştırır, skill dosyalarını yerel klasörden veya Git deposundan alır.
+No separate npm package publication is required. `npx` runs the installer, which retrieves skill files from a local directory or Git repository.
 
-## Kullanım
+## Usage
 
 Codex:
 
@@ -56,50 +56,50 @@ Claude Code:
 /evidence-audit src/auth
 ```
 
-Diğer ajanlar için uygulamanın skill çağırma biçimini kullan veya doğal dilde yaz:
+For other agents, use the application's skill invocation mechanism or a natural-language request:
 
 ```text
 Use evidence-audit to find and prove real bugs in src/auth. Preserve existing edits.
 ```
 
-Kapsam belirsizse skill önce aday kapsamları listeler. Her tur `.temp_files/ledger_<scope-slug>.md`, `prove_F<ID>_*` ve `verify_F<ID>_*` kanıtlarını bırakır. Gerçek hata bulunmayan tur da geçerlidir. Statik şüphe, derleme hatası veya bozuk kontrol vakası doğrulanmış bulgu sayılmaz.
+If the scope is unclear, the skill first lists candidate scopes. Each round retains `.temp_files/ledger_<scope-slug>.md`, `prove_F<ID>_*`, and `verify_F<ID>_*` evidence files. A round with no confirmed defects is valid. Static suspicions, compilation errors, and failed control cases do not count as confirmed findings.
 
-## Paket içeriği
+## Package contents
 
 ```text
 skills/evidence-audit/
-  SKILL.md                       Ortak audit yönergeleri
-  agents/openai.yaml             Codex arayüzü ve implicit invocation ayarı
-  assets/ledger-template.md      Ledger ve rapor şablonu
-  scripts/init-ledger.mjs        İsteğe bağlı, bağımlılıksız ledger başlatıcı
+  SKILL.md                       Shared audit instructions
+  agents/openai.yaml             Codex interface and implicit invocation policy
+  assets/ledger-template.md      Ledger and report template
+  scripts/init-ledger.mjs        Optional ledger initializer with no dependencies
 ```
 
-`agents/openai.yaml` Codex'e özgüdür. Ortak audit yönergeleri Claude'a özgü araç adları, değişkenler veya otomatik shell çalıştıran enjeksiyonlar içermez. Otomatik kullanım Codex'te açık; Claude Code varsayılan skill keşfini kullanır. Uygulama ve kullanıcı izinleri her zaman geçerlidir.
+`agents/openai.yaml` is specific to Codex. The shared audit instructions contain no Claude-specific tool names, variables, or injections that automatically execute shell commands. Implicit invocation is enabled for Codex; Claude Code uses its default skill discovery behavior. Application and user permissions always apply.
 
-Ledger yardımcısı için mevcut Node.js 18+ yeterlidir. Hedef projeye Node veya test framework'ü kurmak gerekmez; helper isteğe bağlıdır. Kurulu skill klasöründeki script'e tam yol ver:
+The optional ledger helper requires an existing Node.js 18+ installation. There is no need to install Node or a test framework in the audited project. Use the full path to the script in the installed skill directory:
 
 ```sh
 node "<installed-skill-dir>/scripts/init-ledger.mjs" --repo "<repo-root>" --slug src-auth --scope src/auth --scope tests/auth
 ```
 
-Helper mevcut ledger'ı değiştirmez, kaynak veya Git durumuna dokunmaz. Kapsam yollarını kontrol eder, şablon oluşturur ve tüm ledger/kanıt isimlerinden sonraki boş ID'yi önerir. ID rezerve edilmez; eşzamanlı audit yapanlar yeni kanıt yazmadan önce koordinasyon kurmalıdır. Toolchain, Git baseline ve komut çıktıları agent tarafından gerçek çalıştırmalardan doldurulur.
+The helper preserves existing ledgers and leaves source files and Git state unchanged. It checks scope paths, creates a template, and suggests the next available ID from all ledger contents and proof filenames. IDs are advisory and are not reserved; concurrent audits must coordinate before writing new evidence. The agent fills in the toolchain, Git baseline, and command outputs from actual runs.
 
-Elle kurulumda `skills/evidence-audit/` klasörünün tamamını uygulamanın skill dizinine kopyala; sadece `SKILL.md` kopyalama. Arşiv alabilen uygulamalarda bu klasörü ZIP olarak paketleyip kendi içe aktarma yolunu kullan. Manuel fallback'te agent'a `SKILL.md` dosyasını okutmak mümkündür; otomatik keşif veya test çalıştırma yeteneği kazandırmaz.
+For manual installation, copy the entire `skills/evidence-audit/` directory into the application's skill directory, including its bundled resources. Applications that accept archives can use a ZIP of this directory through their own import workflow. As a fallback, ask the agent to read `SKILL.md` directly; this does not add automatic discovery or test execution capabilities.
 
-## Geliştirici kontrolleri
+## Development checks
 
-Harici npm bağımlılığı yoktur; `npm install` gerekmez.
+There are no external npm dependencies; `npm install` is unnecessary.
 
 ```sh
 npm run check
 npx skills add . --list
 ```
 
-`npm run check`, paket yapısını doğrular ve helper'ın gerçek dosya davranışlarını test eder: mevcut ledger'ın korunması, ID devamı, aynı dosya için eşzamanlı oluşturma ve kapsam/link sınırları. Kontroller bir modelin her audit kararını doğru vereceğini veya hedef projenin hatasız olduğunu kanıtlamaz.
+`npm run check` validates the package structure and tests the helper's file behavior: preserving existing ledgers, continuing finding IDs, concurrent creation of the same file, and scope and link boundaries. These checks do not certify model decisions or prove that an audited project is free of defects.
 
-## Kaynaklar
+## References
 
 - [Agent Skills specification](https://agentskills.io/specification)
-- [Skills CLI kaynak ve kurulum seçenekleri](https://github.com/vercel-labs/skills)
+- [Skills CLI source and installation options](https://github.com/vercel-labs/skills)
 - [Claude Code skills](https://code.claude.com/docs/en/skills)
-- [OpenAI skill oluşturma belgeleri](https://learn.chatgpt.com/docs/build-skills)
+- [OpenAI skill creation documentation](https://learn.chatgpt.com/docs/build-skills)
