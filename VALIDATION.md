@@ -16,6 +16,15 @@ Helper testleri mevcut kaynak/ledger korunmasını, farklı kapsamlar arasında 
 
 İlk doğrulamada yerel Codex validator'ı Agent Skills standardındaki `compatibility` frontmatter alanını reddetti. Gereksinimler ana metne taşındı; son doğrulama geçti.
 
-Deneme kurulumu yalnızca `.temp_files/install-check/` altında yapıldı. Kullanıcının global skill dizinlerine kurulmadı. Gerçek Claude/Codex model oturumlarında audit davranış değerlendirmesi, diğer işletim sistemlerinde çalıştırma ve uzak GitHub kurulumu yapılmadı. Paket kurulumu, model kararlarının doğruluğunu veya bir hedef kod tabanının hatasızlığını kanıtlamaz.
+İlk deneme kurulumu yalnızca `.temp_files/install-check/` altında yapıldı. Kullanıcının global skill dizinlerine kurulmadı. Gerçek Claude/Codex model oturumlarında audit davranış değerlendirmesi ve diğer işletim sistemlerinde çalıştırma yapılmadı. Paket kurulumu, model kararlarının doğruluğunu veya bir hedef kod tabanının hatasızlığını kanıtlamaz.
 
 İlk paket hazırlığı sırasında bu klasör Git deposu olmadığı için `git diff --check` çalıştırılmadı. Bu bölüm ilk yerel doğrulama kaydıdır; yayın kontrolleri ayrıca aşağıda kaydedilir.
+
+## GitHub yayın doğrulaması — 2026-10-04
+
+- Depo: [ersinkoc/evidence-audit](https://github.com/ersinkoc/evidence-audit); GitHub API üzerinden görünürlük `PUBLIC`, varsayılan dal `main` doğrulandı.
+- Yayın öncesi `npm run check`: yapı doğrulaması ve 5 test geçti.
+- `git diff --cached --check` ve `git diff --check`: çıkış kodu 0.
+- `.temp_files/github-install-check/` içinde `npx skills@1.7.0 add ersinkoc/evidence-audit --skill evidence-audit --agent claude-code codex --copy --yes`: GitHub deposunu klonladı, tek skill keşfetti ve iki ajan için kurulum tamamlandı; çıkış kodu 0.
+- GitHub'dan kurulan iki kopyada dört skill dosyasının tamamı kaynakla byte düzeyinde eşit.
+- README kurulum komutları gerçek depo adına güncellendi. Global kullanıcı kurulumu yapılmadı.
