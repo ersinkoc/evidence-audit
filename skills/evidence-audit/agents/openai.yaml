@@ -1,0 +1,7 @@
+interface:
+  display_name: "Evidence Audit"
+  short_description: "Proof-driven bug hunt and fixes for any codebase scope"
+  default_prompt: "Use $evidence-audit to run an evidence-led audit round on this scope: "
+
+policy:
+  allow_implicit_invocation: true

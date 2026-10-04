@@ -1,0 +1,14 @@
+{
+  "name": "skill-evidence-audit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portable evidence-led audit skill for Agent Skills compatible coding assistants",
+  "repository": { "type": "git", "url": "https://github.com/ersinkoc/evidence-audit.git" },
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "test": "node --test tests/init-ledger.test.mjs",
+    "check": "npm run validate && npm test"
+  }
+}
