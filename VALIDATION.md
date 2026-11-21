@@ -28,3 +28,25 @@ During initial package preparation, this directory was not a Git repository, so 
 - In `.temp_files/github-install-check/`, `npx skills@1.7.0 add ersinkoc/evidence-audit --skill evidence-audit --agent claude-code codex --copy --yes` cloned the GitHub repository, discovered one skill, and completed installation for both agents; exit code 0.
 - All four skill files in both GitHub installation copies matched the source byte for byte.
 - README installation commands were updated to the actual repository name. No global user installation was performed.
+
+## Audit and portability update — 2026-11-21
+
+Validated on Windows 11 with Node.js v26.13.0 and Git Bash. The skill's own procedure was applied to the bundled helper. Evidence is in `.temp_files/` (not committed).
+
+- **F1 (Medium):** `init-ledger.mjs` printed nothing and exited 0 when run through a symlinked or junctioned skill directory. This is the Skills CLI's default install mode.
+  - Cause: the main-module guard compared the link path in `argv[1]` with the resolved `import.meta.url`.
+  - Proof: a control passed and `PROBLEM CONFIRMED` appeared twice. The regression test failed on the old helper.
+  - Fix: the guard now compares real paths.
+  - Verification: `FIX VERIFIED` three times, covering link, link-to-link, relative link, error exit, and library import.
+- **F2 (Low):** scope paths containing `$&`, `$'` or `$$` were treated as replacement patterns, which corrupted the ledger's `Scope:` line.
+  - Proof: as for F1.
+  - Fix: a replacer function.
+  - Verification: `FIX VERIFIED` three times.
+- **Contract extension:** the helper now counts `prove_`/`verify_` directories when suggesting the next ID and reports `gitIgnored`. Both were written test-first.
+- `npm test`: 9 passed, 0 failed, 0 skipped, in three consecutive runs. `npm run validate`: PASS.
+  - The new host-neutrality check and inline-layout drift check were exercised against a deliberately renamed template heading. The check caught it, and the file was restored byte for byte.
+- Tool support in the README was checked against each tool's documentation and the Skills CLI agent list on 2026-11-21. Items that could not be verified from primary sources are marked there.
+- **NOT RUN:**
+  - `npx skills add . --list`: network download not approved in this session.
+  - macOS/Linux.
+  - Agent behavior in real sessions of the listed tools.
