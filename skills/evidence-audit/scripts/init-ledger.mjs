@@ -59,8 +59,10 @@ async function nextId(directory) {
 }
 
 // true/false from `git check-ignore`; null when Git is missing or root is not a work tree.
+// The audited repository is untrusted: core.fsmonitor in its config would run a
+// command when Git reads the index, so it is overridden for this call.
 function gitIgnored(root) {
-  const result = spawnSync('git', ['-C', root, 'check-ignore', '-q', '.temp_files/'], { stdio: 'ignore' });
+  const result = spawnSync('git', ['-c', 'core.fsmonitor=false', '-C', root, 'check-ignore', '-q', '.temp_files/'], { stdio: 'ignore' });
   if (result.error) return null;
   return result.status === 0 ? true : result.status === 1 ? false : null;
 }

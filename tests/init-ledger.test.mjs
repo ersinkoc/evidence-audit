@@ -133,3 +133,20 @@ test('reports whether .temp_files is ignored by Git', { skip: !hasGit && 'git un
   await writeFile(join(repo, '.gitignore'), '.temp_files/\n');
   assert.equal((await initializeLedger(args)).gitIgnored, true);
 });
+
+// F3: the audited repository is untrusted; its Git config must not make the
+// helper execute commands (core.fsmonitor runs when Git reads the index).
+test('Git probe does not run repository-configured fsmonitor commands', { skip: !hasGit && 'git unavailable' }, async t => {
+  const { base, repo, args } = await fixture(t);
+  if (git(repo, 'rev-parse', '--git-dir').status === 0) return t.skip('temp dir is inside a Git repository');
+  assert.equal(git(repo, 'init', '-q').status, 0);
+  await writeFile(join(repo, 'src', 'tracked.txt'), 'x');
+  assert.equal(git(repo, 'add', '.').status, 0);
+  const marker = join(base, 'fsmonitor-ran');
+  const hook = join(base, 'hook.cjs');
+  await writeFile(hook, `require('fs').writeFileSync(${JSON.stringify(marker)}, 'ran')`);
+  const slash = path => path.replaceAll('\\', '/');
+  assert.equal(git(repo, 'config', 'core.fsmonitor', `"${slash(process.execPath)}" "${slash(hook)}"`).status, 0);
+  await initializeLedger(args);
+  await assert.rejects(readFile(marker), { code: 'ENOENT' });
+});

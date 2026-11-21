@@ -50,3 +50,7 @@ Validated on Windows 11 with Node.js v26.13.0 and Git Bash. The skill's own proc
   - `npx skills add . --list`: network download not approved in this session.
   - macOS/Linux.
   - Agent behavior in real sessions of the listed tools.
+- **F3 (Medium, found by automated security review, then proven):** the `gitIgnored` probe ran a command set as `core.fsmonitor` in the audited repository's Git config.
+  - Proof: `PROBLEM CONFIRMED` twice; the regression test was red first.
+  - Fix: `git -c core.fsmonitor=false`. `npm run check`: 10 passed, 0 failed, three runs.
+  - A second report (planted `git.exe` in the current directory on Windows) did not reproduce with a validated harness and was dropped.
