@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 import { readFile, readdir, realpath, lstat, mkdir, writeFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { resolve, relative, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const help = `Create a new audit ledger or leave an existing ledger untouched.
 Usage: node init-ledger.mjs --repo <root> --slug <scope-slug> --scope <path> [--scope <path> ...]
 Scope paths are relative to the repository root. Node.js 18+; no dependencies.
+Prints JSON: ledger path, created, nextFindingId (advisory; counts prove_/verify_
+files and directories and IDs in ledgers), gitIgnored (true/false; null without Git).
 Does not analyze source, run tests, patch code, or reserve finding IDs.`;
 
 function parse(args) {
@@ -42,16 +46,23 @@ async function inspect(path) {
 async function nextId(directory) {
   let highest = 0;
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (!entry.isFile()) continue;
+    // Evidence may be a file or, for package-based languages, a directory.
     const proof = /^(?:prove|verify)_F(\d+)_/.exec(entry.name);
     if (proof) highest = Math.max(highest, Number(proof[1]));
-    if (/^ledger_.+\.md$/.test(entry.name)) {
+    if (entry.isFile() && /^ledger_.+\.md$/.test(entry.name)) {
       const body = await readFile(join(directory, entry.name), 'utf8');
       for (const match of body.matchAll(/\bF(\d+)(?=\b|_)/g)) highest = Math.max(highest, Number(match[1]));
     }
   }
   if (!Number.isSafeInteger(highest) || highest >= Number.MAX_SAFE_INTEGER) throw new Error('Finding ID exceeds safe integer range.');
   return highest + 1;
+}
+
+// true/false from `git check-ignore`; null when Git is missing or root is not a work tree.
+function gitIgnored(root) {
+  const result = spawnSync('git', ['-C', root, 'check-ignore', '-q', '.temp_files/'], { stdio: 'ignore' });
+  if (result.error) return null;
+  return result.status === 0 ? true : result.status === 1 ? false : null;
 }
 
 export async function initializeLedger(args) {
@@ -73,7 +84,8 @@ export async function initializeLedger(args) {
   let created = false;
   if (!file) {
     const template = await readFile(new URL('../assets/ledger-template.md', import.meta.url), 'utf8');
-    const content = template.replaceAll('{{SCOPE}}', options.scopes.map(scope => `\`${scope}\``).join(', '));
+    const scopeList = options.scopes.map(scope => `\`${scope}\``).join(', ');
+    const content = template.replaceAll('{{SCOPE}}', () => scopeList);
     try {
       await writeFile(ledger, content, { encoding: 'utf8', flag: 'wx' });
       created = true;
@@ -83,10 +95,18 @@ export async function initializeLedger(args) {
       if (!raced.isFile() || raced.isSymbolicLink()) throw new Error('Concurrent ledger creation produced a non-regular file.');
     }
   }
-  return { ledger, created, nextFindingId: `F${await nextId(directory)}`, note: 'ID is advisory, not reserved. Recheck before creating evidence. Fill setup and command outputs from actual runs.' };
+  return { ledger, created, nextFindingId: `F${await nextId(directory)}`, gitIgnored: gitIgnored(root), note:'ID is advisory, not reserved. Recheck before creating evidence. Fill setup and command outputs from actual runs.' };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Node resolves links for the main module's import.meta.url but not for argv[1],
+// so compare real paths; skill installers commonly link the skill directory.
+function isMain() {
+  if (!process.argv[1]) return false;
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
+  catch { return false; }
+}
+
+if (isMain()) {
   if (process.argv.slice(2).includes('--help')) console.log(help);
   else {
     try { console.log(JSON.stringify(await initializeLedger(process.argv.slice(2)), null, 2)); }

@@ -1,9 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, readdir, symlink, rm } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { initializeLedger } from '../skills/evidence-audit/scripts/init-ledger.mjs';
+
+const skillDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'evidence-audit');
+const dirLinkType = process.platform === 'win32' ? 'junction' : 'dir';
 
 async function fixture(t) {
   const base = await mkdtemp(join(tmpdir(), 'evidence-skill-test-'));
@@ -71,4 +76,60 @@ test('rejects linked evidence directories, linked ledgers, and scope escape link
   await symlink(outside, join(repo, '.temp_files', 'ledger_src-auth.md'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(initializeLedger(args), /regular file/);
   assert.deepEqual(await readdir(outside), []);
+});
+
+// F1: `npx skills add` installs through a symlink by default. The CLI entrypoint
+// must still run when the script path contains a link, instead of exiting 0 silently.
+test('CLI runs when the skill directory is reached through a link', async t => {
+  const { base, repo } = await fixture(t);
+  const installed = join(base, 'installed-skill');
+  await symlink(skillDir, installed, dirLinkType);
+  const script = join(installed, 'scripts', 'init-ledger.mjs');
+  const help = spawnSync(process.execPath, [script, '--help'], { encoding: 'utf8' });
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /Usage:/);
+  const run = spawnSync(process.execPath, [script, '--repo', repo, '--slug', 'src', '--scope', 'src'], { encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(JSON.parse(run.stdout).created, true);
+});
+
+// F2: scope paths are data; `$&`, `$'` and `$$` are legal in file names and must
+// not be interpreted as String.prototype.replace patterns. (Backticks are rejected
+// separately as Markdown delimiters.)
+test('scope paths containing replacement patterns are written verbatim', async t => {
+  const { repo } = await fixture(t);
+  const scopes = ['a$&b', "c$'d", 'g$$h'];
+  for (const scope of scopes) await mkdir(join(repo, scope));
+  const args = ['--repo', repo, '--slug', 'dollar'];
+  for (const scope of scopes) args.push('--scope', scope);
+  const { ledger } = await initializeLedger(args);
+  const expected = scopes.map(scope => `\`${scope}\``).join(', ');
+  const body = await readFile(ledger, 'utf8');
+  assert.equal(body.split('\n').find(line => line.startsWith('Scope:')), `Scope: ${expected}`);
+  assert.equal(body.split('\n').filter(line => line.startsWith('# Evidence ledger')).length, 1);
+});
+
+// Contract: proofs may be directories (`prove_F<ID>_<slug>/`) for languages that
+// need a package layout, so their IDs are taken too.
+test('next ID accounts for proof and verifier directories', async t => {
+  const { repo, args } = await fixture(t);
+  await mkdir(join(repo, '.temp_files', 'prove_F31_go-package'), { recursive: true });
+  await mkdir(join(repo, '.temp_files', 'verify_F8_x'));
+  await mkdir(join(repo, '.temp_files', 'notes_F99_unrelated'));
+  assert.equal((await initializeLedger(args)).nextFindingId, 'F32');
+});
+
+const git = (cwd, ...args) => spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8' });
+const hasGit = git('.', '--version').status === 0;
+
+test('reports whether .temp_files is ignored by Git', { skip: !hasGit && 'git unavailable' }, async t => {
+  const { repo, args } = await fixture(t);
+  if (git(repo, 'rev-parse', '--git-dir').status === 0) return t.skip('temp dir is inside a Git repository');
+  assert.equal((await initializeLedger(args)).gitIgnored, null);
+  assert.equal(git(repo, 'init', '-q').status, 0);
+  // Isolate from the user's global excludes file, which may already ignore .temp_files/.
+  assert.equal(git(repo, 'config', 'core.excludesFile', '').status, 0);
+  assert.equal((await initializeLedger(args)).gitIgnored, false);
+  await writeFile(join(repo, '.gitignore'), '.temp_files/\n');
+  assert.equal((await initializeLedger(args)).gitIgnored, true);
 });

@@ -17,6 +17,20 @@ assert.equal(name, 'evidence-audit');
 assert.ok(description && description.length <= 1024, 'Description must be 1-1024 characters');
 assert.ok(body.split('\n').length < 500, 'Keep entrypoint under 500 lines');
 assert.ok(!/[A-Z]:[\\/]|\/Users\//.test(body), 'Skill must not contain machine-specific paths');
+// Portability: the same SKILL.md is loaded by many hosts, so no host-only
+// substitutions, tool allowlists, or shell-injection syntax in the shared file.
+for (const pattern of [/\$\{CLAUDE_[A-Z_]+\}/, /\$ARGUMENTS\b/, /^allowed-tools:/m, /^compatibility:/m, /!`[^`]+`/, /\{\{args\}\}/]) {
+  assert.ok(!pattern.test(body), `SKILL.md must stay host-neutral: found ${pattern}`);
+}
+// The inline report layout (used when bundled files are unavailable) must list the
+// same sections, in the same order, as the bundled ledger template.
+const template = await readFile(join(skill, 'assets', 'ledger-template.md'), 'utf8');
+const section = name => name.replace(/ \(.*\)$/, '');
+const templateSections = [...template.matchAll(/^### (.+)$/gm)].map(m => section(m[1]));
+const inline = /^`Summary`.*$/m.exec(body)?.[0];
+assert.ok(inline, 'SKILL.md must keep the inline report layout line');
+const inlineSections = inline.split(' · ').map(part => section(/^`([^`]+)`/.exec(part)?.[1] ?? ''));
+assert.deepEqual(inlineSections, templateSections, 'Inline report layout must match ledger-template.md sections');
 for (const link of body.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
   if (/^https?:/.test(link[1])) continue;
   const target = resolve(skill, link[1].split('#')[0]);
